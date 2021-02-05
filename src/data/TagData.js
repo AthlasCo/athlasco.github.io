@@ -10,7 +10,11 @@ export default class TagData extends Record {
   attributes: Array = [];
 
   equals(other: TagData) {
-    return this.id === other.id;
+    return this.id === other.id
+      && this.name === other.name
+      && this.description === other.description
+      && this.parent === other.parent
+      && this.attributes === other.attributes;
   }
 
   getChild(id: string) {

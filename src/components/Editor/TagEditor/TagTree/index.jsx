@@ -3,41 +3,44 @@ import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 
 import {
+  List,
   withStyles,
 } from '@material-ui/core';
-import {
-  ExpandMore,
-  ChevronRight,
-} from '@material-ui/icons';
-import {
-  TreeView,
-  TreeItem,
-} from '@material-ui/lab';
+// import {
+//   ArrowRight,
+//   ExpandLess,
+//   ExpandMore,
+// } from '@material-ui/icons';
+
+import TagTreeNode from './TagTreeNode';
 
 import tagTreeStyles from './tagTreeStyles';
 
 const TagTree = (props) => {
   const {
-    classes,
-    tagList,
+    // tagList,
+    rootTags,
   } = props;
 
-  const renderTree = (tag) => (
-    <TreeItem key={tag.id} nodeId={tag.id} label={tag.name}>
-      {tag.children.length > 0 ? tag.children.map((child) => renderTree(child)) : null}
-    </TreeItem>
-  );
+  // const [rootTags, setRootTags] = useState([]);
+
+  // useEffect(() => {
+  //   const newRootTags = tagList.filter((tag) => tag.parent === false);
+  //   newRootTags.forEach((tag) => {
+  //     if (rootTags.filter((rootTag) => rootTag.id === tag.id).length === 0) {
+  //       setRootTags(rootTags.concat(tag));
+  //     }
+  //   });
+  // }, [tagList]);
 
   return (
-    <TreeView
-      className={classes.tagTree}
-      defaultCollapseIcon={<ExpandMore />}
-      defaultExpandIcon={<ChevronRight />}
-    >
-      {tagList.filter((tag) => tag.parent === false).forEach((tag) => {
-        renderTree(tag);
-      })}
-    </TreeView>
+    <div>
+      <List>
+        {rootTags.map((tag) => (
+          <TagTreeNode key={tag.id} tag={tag} />
+        ))}
+      </List>
+    </div>
   );
 };
 
@@ -45,10 +48,12 @@ TagTree.propTypes = {
   dispatch: PropTypes.func.isRequired,
   classes: PropTypes.object.isRequired,
   tagList: PropTypes.array.isRequired,
+  rootTags: PropTypes.array.isRequired,
 };
 
 const mapStateToProps = (state) => ({
   tagList: state.tags.tagList,
+  rootTags: state.tags.rootTags,
 });
 
 export default withStyles(

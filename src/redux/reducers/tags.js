@@ -1,7 +1,7 @@
 /* eslint-disable import/prefer-default-export */
 import {
   TAG_TOGGLE_ADD_MODAL,
-  TAG_RECEIVE_SUCCESS,
+  TAG_ADD,
 } from '../actions';
 
 import TagData from '../../data/TagData';
@@ -14,16 +14,40 @@ const createTagObject = (tag) => new TagData({
   attributes: tag.data().attributes,
 });
 
-const addTagToList = (tagList, newTag) => {
-  const modifiedTagList = tagList.concat(newTag);
-  const parentTagId = newTag.parent.split('~').filter((val) => val !== '').pop();
-  const parentIndex = modifiedTagList.findIndex(
+const addTag = (pt, parentPath, newTag) => {
+  const parentTag = pt;
+
+  if (parentPath.length === 0) {
+    parentTag.children.push(newTag);
+    console.log(parentTag.children);
+  } else {
+    const tagId = parentPath.shift();
+    const currIndex = parentTag.children.findIndex(
+      (tag) => tag.id === tagId,
+    );
+
+    parentTag.children[currIndex] = addTag(
+      parentTag.children[currIndex],
+      parentPath,
+      newTag,
+    );
+  }
+
+  return parentTag;
+};
+
+const addTagToTree = (tagList, newTag) => {
+  const modifiedTagList = tagList;
+
+  // Separate parent path and remove empty elements
+  const parentPath = newTag.parent.split('~').filter((val) => val !== '');
+
+  // Find base root tag
+  const parentTagId = parentPath.shift();
+  const rootIndex = tagList.findIndex(
     (tag) => tag.id === parentTagId,
   );
-
-  if (parentIndex >= 0) {
-    modifiedTagList[parentIndex] = modifiedTagList[parentIndex].addChild(newTag);
-  }
+  modifiedTagList[rootIndex] = addTag(modifiedTagList[rootIndex], parentPath, newTag);
 
   return modifiedTagList;
 };
@@ -31,6 +55,7 @@ const addTagToList = (tagList, newTag) => {
 export const tagsReducer = (
   state = {
     tagList: [],
+    rootTags: [],
     addModalToggle: false,
   },
   action,
@@ -41,23 +66,29 @@ export const tagsReducer = (
         ...state,
         addModalToggle: action.toggle,
       };
-    case TAG_RECEIVE_SUCCESS: {
-      const newTag = createTagObject(action.tag);
+    case TAG_ADD: {
+      const newTagList = state.tagList;
+      let newRootTagList = state.rootTags;
 
-      const modifiedTagList = (newTag.parent) ? (
-        addTagToList(state.tagList, newTag)
-      ) : (
-        state.tagList.concat(newTag)
-      );
+      action.tags.forEach((tag) => {
+        const newTag = createTagObject(tag);
 
-      if (state.tagList.filter((tag) => tag.equals(newTag)).length === 0) {
-        return {
-          ...state,
-          tagList: modifiedTagList,
-        };
-      }
+        if (newTagList.filter((t) => t.equals(newTag)).length === 0) {
+          newTagList.push(newTag);
 
-      return state;
+          if (newTag.parent) {
+            newRootTagList = addTagToTree(newRootTagList, newTag);
+          } else {
+            newRootTagList.push(newTag);
+          }
+        }
+      });
+
+      return {
+        ...state,
+        tagList: newTagList,
+        rootTags: newRootTagList,
+      };
     }
     default:
       return state;

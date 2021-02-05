@@ -3,14 +3,13 @@ import { firebaseApp } from '../../firebase/Firebase';
 
 export const TAG_TOGGLE_ADD_MODAL = 'TAG_TOGGLE_ADD_MODAL';
 export const TAG_LIST_REQUEST = 'TAG_LIST_REQUEST';
-export const TAG_RECEIVE_SUCCESS = 'TAG_RECEIVE_SUCCESS';
-export const TAG_REMOVE_SUCCESS = 'TAG_REMOVE_SUCCESS';
+export const TAG_ADD = 'TAG_ADD';
+export const TAG_REMOVE = 'TAG_REMOVE';
+export const TAG_UPDATE = 'TAG_UPDATE';
 export const TAG_LIST_FAILURE = 'TAG_LIST_FAILURE';
 export const TAG_LIST_UNSUBSCRIBE = 'TAG_LIST_UNSUBSCRIBE';
 export const TAG_ADD_REQUEST = 'TAG_ADD_REQUEST';
-export const TAG_ADD_SUCCESS = 'TAG_ADD';
 export const TAG_ADD_FAILURE = 'TAG_ADD_FAILURE';
-export const TAG_DELETE = 'TAG_DELETE';
 
 /** Firestore collection references */
 const tagsCollection = firebaseApp.firestore().collection('tags');
@@ -29,14 +28,19 @@ const requestTagListAction = () => ({
   type: TAG_LIST_REQUEST,
 });
 
-const receiveTagAction = (tag) => ({
-  type: TAG_RECEIVE_SUCCESS,
-  tag,
+const addTagsAction = (tags) => ({
+  type: TAG_ADD,
+  tags,
 });
 
-const removeTagAction = (tag) => ({
-  type: TAG_REMOVE_SUCCESS,
-  tag,
+const updateTagsAction = (tags) => ({
+  type: TAG_UPDATE,
+  tags,
+});
+
+const removeTagsAction = (tags) => ({
+  type: TAG_REMOVE,
+  tags,
 });
 
 const tagListErrorAction = (error) => ({
@@ -50,10 +54,6 @@ const tagListUnsubscribeAction = () => ({
 
 const addTagRequestAction = () => ({
   type: TAG_ADD_REQUEST,
-});
-
-const addTagSuccessAction = () => ({
-  type: TAG_ADD_SUCCESS,
 });
 
 const addTagFailureAction = (error) => ({
@@ -72,17 +72,26 @@ export const getTagList = () => (dispatch) => {
     .orderBy('parent')
     .onSnapshot(
       (snapshot) => {
+        const addTags = [];
+        const updateTags = [];
+        const removeTags = [];
+
         snapshot.docChanges().forEach((change) => {
           if (change.type === 'added') {
             // Add tag action
-            dispatch(receiveTagAction(change.doc));
+            addTags.push(change.doc);
           } else if (change.type === 'modified') {
             // Modify tag action
+            updateTags.push(change.doc);
           } else if (change.type === 'removed') {
             // Remove tag action
-            dispatch(removeTagAction(change.doc));
+            removeTags.push(change.doc);
           }
         });
+
+        dispatch(addTagsAction(addTags));
+        dispatch(updateTagsAction(updateTags));
+        dispatch(removeTagsAction(removeTags));
       },
       (error) => {
         dispatch(tagListErrorAction(error));
@@ -106,14 +115,6 @@ export const addTag = (newTag) => (dispatch) => {
       description: newTag.description,
       parent: newTag.parent,
       attributes: newTag.attributes,
-    })
-    .then(() => {
-      dispatch(addTagSuccessAction());
-
-      // Add tag to parent reference `child` array
-      // tagsCollection.doc(newTag.parentRef).update({
-      //   children: firebase.firestore.FieldValue.arrayUnion(tagRef.id),
-      // });
     })
     .catch((error) => {
       dispatch(addTagFailureAction(error));
